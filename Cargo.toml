@@ -1,6 +1,6 @@
 [package]
 name = "npm-usage"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["simonxabris <abris96@gmail.com>"]
 edition = "2018"
 
@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.3"
+regex = "1"

@@ -22,14 +22,7 @@ fn main() {
 
     let files = find_files(current_dir);
 
-    let files_importing_package: Vec<String> = files
-        .into_iter()
-        .filter(|file_name| {
-            let file_contents = read_to_string(file_name).expect("Invalid filename");
-
-            file_contents.contains(package_name)
-        })
-        .collect();
+    let files_importing_package = filter_files(&files, &package_name);
 
     for file in &files_importing_package {
         println!("{}", file);
@@ -80,4 +73,40 @@ fn find_files<T: AsRef<Path>>(dir: T) -> Vec<String> {
     }
 
     files
+}
+
+/// This function searches the list of JS/TS files
+/// and return those that import the specified package.
+fn filter_files<'a>(files: &'a Vec<String>, package_name: &str) -> Vec<&'a String> {
+    let files_importing_package: Vec<&String> = files
+        .iter()
+        .filter(|file_name| {
+            let file_contents = read_to_string(file_name).expect("Invalid filename");
+
+            file_contents.contains(package_name)
+        })
+        .collect();
+
+    files_importing_package
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{filter_files, find_files};
+
+    #[test]
+    fn find_all_files() {
+        let files = find_files(".");
+
+        assert_eq!(files.len(), 2);
+    }
+
+    #[test]
+    fn filters_found_files_correctly() {
+        let files = find_files(".");
+
+        let filtered_files = filter_files(&files, "react");
+
+        assert_eq!(filtered_files.len(), 1);
+    }
 }

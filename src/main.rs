@@ -1,4 +1,5 @@
 use clap::{App, Arg};
+use regex::Regex;
 use std::env::current_dir;
 use std::fs;
 use std::fs::read_to_string;
@@ -78,12 +79,20 @@ fn find_files<T: AsRef<Path>>(dir: T) -> Vec<String> {
 /// This function searches the list of JS/TS files
 /// and return those that import the specified package.
 fn filter_files<'a>(files: &'a Vec<String>, package_name: &str) -> Vec<&'a String> {
+    let import_regex_string = format!("import .+ from (\"|'){}(\"|')", package_name);
+    let require_regex_string = format!("require\\((\"|'){}(\"|')\\)", package_name);
+    let import_regex = Regex::new(&import_regex_string[..]).unwrap();
+    let require_regex = Regex::new(&require_regex_string[..]).unwrap();
+
     let files_importing_package: Vec<&String> = files
         .iter()
         .filter(|file_name| {
             let file_contents = read_to_string(file_name).expect("Invalid filename");
 
-            file_contents.contains(package_name)
+            let imports_package = import_regex.is_match(&file_contents[..]);
+            let requires_package = require_regex.is_match(&file_contents[..]);
+
+            imports_package || requires_package
         })
         .collect();
 
@@ -93,12 +102,13 @@ fn filter_files<'a>(files: &'a Vec<String>, package_name: &str) -> Vec<&'a Strin
 #[cfg(test)]
 mod tests {
     use super::{filter_files, find_files};
+    use regex::Regex;
 
     #[test]
     fn find_all_files() {
         let files = find_files(".");
 
-        assert_eq!(files.len(), 2);
+        assert_eq!(files.len(), 6);
     }
 
     #[test]
@@ -107,6 +117,28 @@ mod tests {
 
         let filtered_files = filter_files(&files, "react");
 
-        assert_eq!(filtered_files.len(), 1);
+        assert_eq!(filtered_files.len(), 4);
+    }
+
+    #[test]
+    fn require_regex() {
+        let require_regex_string = format!("require\\((\"|'){}(\"|')\\)", "react");
+        let require_regex = Regex::new(&require_regex_string[..]).unwrap();
+
+        assert_eq!(
+            require_regex.is_match("const react = require(\"react\")"),
+            true
+        );
+    }
+
+    #[test]
+    fn import_regex() {
+        let import_regex_string = format!("import .+ from (\"|'){}(\"|')", "react");
+        let import_regex = Regex::new(&import_regex_string[..]).unwrap();
+
+        assert_eq!(
+            import_regex.is_match("import * as React from 'react'"),
+            true
+        )
     }
 }
